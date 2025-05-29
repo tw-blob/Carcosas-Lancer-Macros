@@ -514,26 +514,26 @@ function compareStringContents(str1, str2){ //compare two string while ignoring 
 function extractClass(npc, classList){
 	//npc string looks like
 	// "VETERAN COMMANDER DEMOLISHER"
-	// at this point. 
-	
+	// at this point.
+
 	// the fact that a NPC class name could theoretically contain spaces makes this task a little annoying.
-	
+
 	// first, we process classList and replace any element that contains a Space with an array, split into words. i.e a class called "BIG IRON" would be reformatted to ["BIG", "IRON"]
-	
+
 	//then we split NPC into an npc_array (i.e ["VETERAN", "COMMANDER", "DEMOLISHER"]
-	
+
 	// then we iterate through classList, checking to see if the class is in the npc_array. if it is, record where it is, then keep going.
 	// at the end, if multiple classes are detected, take the one with the highest index.
-	
+
 	// this is to account for weird homebrew nonsense- it is possible that homebrew A will add a class called PUPPETEER while homebrew B adds a template called PUPPETEER, and we would not want it to claim that a PUPPETEER SPITE was a PUPPETEER instead of a SPITE.
 
 	//this is a real example- I'm pretty sure I have both a PUPPETEER class and PUPPETEER template loaded.
-	
-	// currently this script does not account for, say, classnames that contain each other- for example, it will not adequately handle if you have a class called "BIG IRON" and another class called "IRON". 
-	
+
+	// currently this script does not account for, say, classnames that contain each other- for example, it will not adequately handle if you have a class called "BIG IRON" and another class called "IRON".
+
 	let npc_split = npc.toUpperCase().split(" "); //make sure everything is upper case.
-	
-	
+
+
 	let located = []
 	let positions = []
 	let numwords = []
@@ -541,27 +541,27 @@ function extractClass(npc, classList){
 		if(classList[i].indexOf(" ") != -1){
 			classList[i] = classList[i].split(" ");
 		}
-		
+
 		let currentclass = classList[i]
-		
+
 		if(typeof currentclass === 'string'){
-			
+
 			let ind = npc_split.lastIndexOf(currentclass.toUpperCase());
 			if(ind != -1){
 				positions.push(ind)
 				numwords.push(1)
 				located.push(currentclass)
 			}
-			
-			
-			
-			
+
+
+
+
 		}else{ //arraycase
 			//let ind = npc_split.lastIndexOf(currentclass[0].toUpperCase());
-			
-			
+
+
 			let ind = findLastIndexOfSubarray(arrayToUpperCase(npc_split), arrayToUpperCase(currentclass))
-			
+
 			/* outdated in favor of above handler function
 			if(ind != -1){
 				for(let j = 1; j < currentclass.length; j++){
@@ -569,25 +569,25 @@ function extractClass(npc, classList){
 						ind = -1;
 						break;
 					}
-					
+
 				}
 			}
 			*/
-			
+
 			if(ind != -1){
 				positions.push(ind)
 				numwords.push(currentclass.length)
 				located.push(currentclass.join(" "))
-				
+
 			}
-			
-			
+
+
 		}
-		
-		
-		
+
+
+
 	}
-	
+
 	//at this point we should have three arrays, assuming we initially inputted
 	// "DEMOLISHER DEMOLISHER RAINMAKER BIG IRON
 	// where we assume BIG IRON is some homebrew class
@@ -595,31 +595,46 @@ function extractClass(npc, classList){
 	// located: ["BIG IRON", "DEMOLISHER", "RAINMAKER"]
 	// positions: [3, 1, 2]
 	// numwords: [2, 1, 1]
-	
-	
+
+
 	let max = Math.max(...positions)
-	
-	// this also doesn't account for the case where you have multiple things at the SAME position- like if you had the classes "BIG" and "BIG IRON". To account for that, we'd look for all instances of max, then find some way to choose one (probably by taking the one with the corresponding largest num[] element). 
+
+	// this also doesn't account for the case where you have multiple things at the SAME position- like if you had the classes "BIG" and "BIG IRON". To account for that, we'd look for all instances of max, then find some way to choose one (probably by taking the one with the corresponding largest num[] element).
 	
 	//which actually does occur; for example, the Enhanced Combat supplement as a Scout Craft npc, which clashes with Scout. But that's an optional objective so I'm going to put off dealing with it.
-	
-	let maxind = positions.indexOf(max);
-	
-	let nwords = numwords[maxind]
-	let name = located[maxind]
-	
-	npc_split.splice(max, nwords);
+
+    // If multiple classes were found at the rightmost position, pick the one with the most words.
+    // This helps disambiguate cases like "SCOUT" vs "SCOUT CRAFT" at the same position.
+    let best_candidate_maxind = -1;
+    let max_numwords_at_max_pos = -1;
+
+    for (let i = 0; i < positions.length; i++) {
+        if (positions[i] === max) { // Check only candidates at the 'max' (rightmost) position
+            if (numwords[i] > max_numwords_at_max_pos) {
+                max_numwords_at_max_pos = numwords[i];
+                best_candidate_maxind = i;
+            }
+        }
+    }
+    let maxind = best_candidate_maxind; // This is now the index of the best match
+
+
+	let nwords = numwords[maxind];
+	let name = located[maxind];
+
+
+    npc_split.splice(max, nwords);
 	
 	//console.log("located " + located)
 	//console.log("positions " + positions)
 	//console.log("max" + max)
-	
-	
-	
+
+
+
 	//note: one thing we did here, which is either very important or entirely worthless, is that we preserved the formal capitalization of the class name. LCPs are sometimes inconsistent in the capitalization- some format it as ASSAULT but some do Assault.
 	// since we later have to lookup the class name in the compendium, we have kept the official capitalization. if the lookup is case-sensitive, this will save us some work later.
 	//if not, oh well, doesn't hurt.
-	return([name, npc_split.join(" ")]) 
+	return([name, npc_split.join(" ")])
 }
 
 
